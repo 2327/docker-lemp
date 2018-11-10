@@ -1,0 +1,64 @@
+version: '3'
+
+networks:
+  traefik:
+    external: true
+  internal:
+    driver: bridge
+
+services:
+  web:
+    image: nginx:latest
+    expose:
+      - 80
+    volumes:
+      - ./data/www:/code
+      - ./site.conf:/etc/nginx/conf.d/0.conf
+      - ./logs:/var/log/nginx
+    labels:
+      - "traefik.frontend.entryPoints=http,https"
+      - "traefik.docker.network=traefik"
+      - "traefik.frontend.rule=Host:example.ltd,www.example.ltd"
+      - "traefik.enable=true"
+    links:
+      - php
+    networks:
+      - traefik
+      - internal
+
+  php:
+    image: php:latest
+    volumes:
+      - ./data/www:/code
+      - ./php_msmtp.conf:/etc/msmtp.conf:ro
+      - ./php.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+      - ./logs:/var/log/php
+    networks:
+      - internal
+
+  mirhitech_ftp:
+    image: vsftpd:latest
+    environment:
+      - PASSWORD=pAs$wR0d
+    volumes:
+      - ./data/www/uploads/product:/home/1c
+    ports:
+      - 21:21
+      - 10090-10100:10090-10100
+    networks:
+      - internal
+
+  mysql:
+    restart: always
+    image: mysql:5.7
+    expose:
+      - 3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=pAs$wR0d
+      - MYSQL_DATABASES=example:pAs$wR0d
+    volumes:
+      - ./data/db:/var/lib/mysql
+    networks:
+      - internal
+
+
